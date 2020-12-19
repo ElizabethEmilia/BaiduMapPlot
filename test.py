@@ -11,19 +11,19 @@ def load_data():
     return x_test, y_test, y_hm, pred
 
 #################
-track_index = 119
+track_index = 99
 #################
 def draw_map(idx, points, unchange, heatmap, pred):
     ################
     # 画线和画点偏移量
     manual_line_offset_x = -7
-    manual_line_offset_y = 6
+    manual_line_offset_y = 7
     ################
     # 地图偏移量
     ###  右移 +   左移 -
-    manual_bias_x = 76
+    manual_bias_x = 165
     ###  上移 +   下移 -
-    manual_bias_y = -20
+    manual_bias_y = -35
     ################
     # 只显示想要的部分
     filter = False
@@ -32,7 +32,10 @@ def draw_map(idx, points, unchange, heatmap, pred):
     # 如果有已经保存的配置信息，读取
     load_saved = True
     # 将当前配置写入配置信息
-    freeze_parameter =  True
+    freeze_parameter = not True
+    ################
+    no_uncertainly = True
+    no_mark = False
     ################
 
     ## load offset parameters
@@ -159,18 +162,19 @@ def draw_map(idx, points, unchange, heatmap, pred):
     draw = ImageDraw.Draw(img)
 
     # 画heat的圆
-    for i in range(len(points)):
-        this_pt = points[i]
-        threshold_uncertainly = 0.3
-        heat = (heatmap[i] / max_heat)
-        if (heat >= threshold_uncertainly):
-            mx, my = mapping_points(this_pt[1], this_pt[0])
-            print('over threshold: ', heat)
-            circle_radius = int(10 * (1 + 20*(heat - threshold_uncertainly)))
-            draw.ellipse([mx - circle_radius, my - circle_radius, mx + circle_radius, my + circle_radius],
-                         #fill=(int(255 * (1 - heat)), int(255 * (1 - heat)), int(255 * (1 - heat)), 128),
-                         fill = (255, 255, 255, int((heat-threshold_uncertainly)*208+10)),
-                         outline=(255,255,255,200), width=4)
+    if not no_uncertainly:
+        for i in range(len(points)):
+            this_pt = points[i]
+            threshold_uncertainly = 0.3
+            heat = (heatmap[i] / max_heat)
+            if (heat >= threshold_uncertainly):
+                mx, my = mapping_points(this_pt[1], this_pt[0])
+                print('over threshold: ', heat)
+                circle_radius = int(10 * (1 + 20*(heat - threshold_uncertainly)))
+                draw.ellipse([mx - circle_radius, my - circle_radius, mx + circle_radius, my + circle_radius],
+                             #fill=(int(255 * (1 - heat)), int(255 * (1 - heat)), int(255 * (1 - heat)), 128),
+                             fill = (255, 255, 255, int((heat-threshold_uncertainly)*208+10)),
+                             outline=(255,255,255,200), width=4)
 
     # 画线
     for i in range(len(points)-1):
@@ -205,6 +209,9 @@ def draw_map(idx, points, unchange, heatmap, pred):
             circle_radius = 17
             draw.ellipse([mx - circle_radius, my - circle_radius, mx + circle_radius, my + circle_radius], fill=point_color,
                          outline=darker_color, width=3)
+
+            if no_mark:
+                continue
             #### 标出ABCD...
             # 计算斜率
             another_pt = points[i+5 if i<5 else i-5]
@@ -229,7 +236,7 @@ def draw_map(idx, points, unchange, heatmap, pred):
     #img.show()
     img_bg_new.paste(img, (0,0), img)
     img_bg_new.show()
-    img_bg_new.save('output/{}.png'.format(idx))
+    img_bg_new.save('output/{}{}.png'.format(idx, '__no_uncertain' if no_uncertainly else ''))
 
     with open('output/{}.png.txt'.format(idx), 'w') as file:
         file.write(
