@@ -11,7 +11,7 @@ def load_data():
     return x_test, y_test, y_hm, pred
 
 #################
-track_index = 99
+track_index = [14, 17, 21, 40, 76, 77, 99, 119]
 #################
 def draw_map(idx, points, unchange, heatmap, pred):
     ################
@@ -34,8 +34,9 @@ def draw_map(idx, points, unchange, heatmap, pred):
     # 将当前配置写入配置信息
     freeze_parameter = not True
     ################
-    no_uncertainly = True
+    no_uncertainly = False
     no_mark = False
+    zoom = 4
     ################
 
     ## load offset parameters
@@ -62,9 +63,9 @@ def draw_map(idx, points, unchange, heatmap, pred):
     drt_x = max_x - min_x
     drt_y = max_y - min_y
     drt = max(drt_x, drt_y)
-    canvas_width = 1200
-    canvas_height = 1200
-    canvas_padding = 60
+    canvas_width = 1200 * zoom
+    canvas_height = 1200 * zoom
+    canvas_padding = 60 * zoom
     real_canvas_width = canvas_width - 2 * canvas_padding
     real_canvas_height = canvas_height - 2 * canvas_padding
 
@@ -170,11 +171,11 @@ def draw_map(idx, points, unchange, heatmap, pred):
             if (heat >= threshold_uncertainly):
                 mx, my = mapping_points(this_pt[1], this_pt[0])
                 print('over threshold: ', heat)
-                circle_radius = int(10 * (1 + 20*(heat - threshold_uncertainly)))
+                circle_radius = int(10 * (1 + 20*(heat - threshold_uncertainly))*zoom)
                 draw.ellipse([mx - circle_radius, my - circle_radius, mx + circle_radius, my + circle_radius],
                              #fill=(int(255 * (1 - heat)), int(255 * (1 - heat)), int(255 * (1 - heat)), 128),
                              fill = (255, 255, 255, int((heat-threshold_uncertainly)*208+10)),
-                             outline=(255,255,255,200), width=4)
+                             outline=(255,255,255,200), width=int(4*zoom))
 
     # 画线
     for i in range(len(points)-1):
@@ -188,7 +189,7 @@ def draw_map(idx, points, unchange, heatmap, pred):
         heat = 1
         line_color = (int(heat*base_color[0]),int(heat*base_color[1]),int(heat*base_color[2]))
         #line_color = get_color_by_heat(heat)
-        draw.line((*mapping_points(this_pt[1], this_pt[0]), *mapping_points(next_pt[1], next_pt[0])), fill=line_color, width=8)
+        draw.line((*mapping_points(this_pt[1], this_pt[0]), *mapping_points(next_pt[1], next_pt[0])), fill=line_color, width=int(8*zoom))
 
     # 画方式改变的圆和端点
     upcount = 0
@@ -206,9 +207,9 @@ def draw_map(idx, points, unchange, heatmap, pred):
                 point_color = (51, 204, 153)
             darker_color = (int(point_color[0]*0.5),int(point_color[1]*0.5),int(point_color[2]*0.5))
             mx, my = mapping_points(this_pt[1], this_pt[0])
-            circle_radius = 17
+            circle_radius = int(17*zoom)
             draw.ellipse([mx - circle_radius, my - circle_radius, mx + circle_radius, my + circle_radius], fill=point_color,
-                         outline=darker_color, width=3)
+                         outline=darker_color, width=int(3*zoom))
 
             if no_mark:
                 continue
@@ -223,13 +224,15 @@ def draw_map(idx, points, unchange, heatmap, pred):
             if k < 1: ## 显示在下面
                 if dnm % 2 == 0: xb, yb = 25, -25
                 else: xb, yb = 25, -25
+                xb, yb = xb*zoom, yb*zoom
                 dnm = dnm+1
             else:  ## 显示在左右
                 if upm % 2 == 0: yb, xb = -65, -15
                 else: yb, xb = -65, -15
+                xb, yb = xb * zoom, yb * zoom
                 upm = upm + 1
             wd = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'[upcount]
-            draw.text((x1+xb, y1+yb), wd, fill=(0,0,0), font=ImageFont.truetype('arial', size=40))
+            draw.text((x1+xb, y1+yb), wd, fill=(0,0,0), font=ImageFont.truetype('arial', size=int(40*zoom)))
             print('MARK: ', wd, [x1+xb, y1+yb], 'up' if k>1 else 'right')
             upcount = upcount+1
 
@@ -248,9 +251,15 @@ def draw_map(idx, points, unchange, heatmap, pred):
         np.save('output/{}.params.npy'.format(idx), parameters)
 
 
+def draw(i):
+    draw_map(i, x[i], [t[0] for t in y[i]], hm[i], pred[i])
+
 if __name__ == '__main__':
     x, y, hm, pred = load_data()
-    i = track_index
-    draw_map(i, x[i], [t[0] for t in y[i]], hm[i], pred[i])
+    if track_index is int:
+        draw(track_index)
+    else:
+        for i in track_index:
+            draw(i)
     #for track_idx in range(x.shape[0]):
     #    draw_map(track_idx, x[track_idx])
