@@ -10,26 +10,29 @@ def load_data():
     pred = np.load('./y_pred.npy')
     return x_test, y_test, y_hm, pred
 
+#################
+track_index = 119
+#################
 def draw_map(idx, points, unchange, heatmap, pred):
     ################
     # 画线和画点偏移量
-    manual_line_offset_x = -15
-    manual_line_offset_y = -10
+    manual_line_offset_x = -7
+    manual_line_offset_y = 6
     ################
     # 地图偏移量
     ###  右移 +   左移 -
-    manual_bias_x = 50
+    manual_bias_x = 76
     ###  上移 +   下移 -
-    manual_bias_y = 0
+    manual_bias_y = -20
     ################
     # 只显示想要的部分
     filter = False
     center_point = -1
     ################
     # 如果有已经保存的配置信息，读取
-    load_saved = False
+    load_saved = True
     # 将当前配置写入配置信息
-    freeze_parameter = False
+    freeze_parameter =  True
     ################
 
     ## load offset parameters
@@ -62,9 +65,13 @@ def draw_map(idx, points, unchange, heatmap, pred):
     real_canvas_width = canvas_width - 2 * canvas_padding
     real_canvas_height = canvas_height - 2 * canvas_padding
 
+    ## 把图标移到中间
+    drt_x_offset = max(0, drt_y-drt_x) / 2
+    drt_y_offset = max(0, drt_x-drt_y) / 2
+
     def mapping_points(x, y):
-        d_x = x - min_x
-        d_y = y - min_y
+        d_x = x - min_x + drt_x_offset
+        d_y = y - min_y + drt_y_offset
         m_x = (d_x / drt) * real_canvas_width + canvas_padding + manual_line_offset_x
         m_y = canvas_height - ((d_y / drt) * real_canvas_height + canvas_padding) + manual_line_offset_y
         return m_x, m_y
@@ -92,10 +99,10 @@ def draw_map(idx, points, unchange, heatmap, pred):
     padding_y_bias = (canvas_padding * drt) / real_canvas_height
     print('PADDING BIAS: ', padding_x_bias, padding_y_bias)
 
-    map_p1x = min_x - padding_x_bias
-    map_p1y = min_y - padding_y_bias
-    map_p2x = min_x + drt + padding_x_bias
-    map_p2y = min_y + drt + padding_y_bias
+    map_p1x = min_x - padding_x_bias - drt_x_offset
+    map_p1y = min_y - padding_y_bias - drt_y_offset
+    map_p2x = min_x + drt + padding_x_bias - drt_x_offset
+    map_p2y = min_y + drt + padding_y_bias - drt_y_offset
     map_p_str = "{},{};{},{}".format(map_p1y, map_p1x, map_p2y, map_p2x)
     map_i_str = "{},{}|{},{}".format(map_p1y, map_p1x, map_p2y, map_p2x)
     print(map_p_str)
@@ -106,12 +113,12 @@ def draw_map(idx, points, unchange, heatmap, pred):
     try:
         img_mask = Image.open('mask{}.png'.format(idx))
     except:
-        url = 'https://apis.map.qq.com/ws/staticmap/v2/?key=TORBZ-AGC3R-Y7YWF-WUVMG-CY3D3-BNFSC&size=1200*1200&bounds={}&path=color:0x45335500|{}'.format(map_p_str, map_i_str)
+        url = 'https://apis.map.qq.com/ws/staticmap/v2/?key=TORBZ-AGC3R-Y7YWF-WUVMG-CY3D3-BNFSC&size=1000*1000&bounds={}&path=color:0x45335500|{}'.format(map_p_str, map_i_str)
         print(url)
         response = requests.get(url)
         img_mask = Image.open(BytesIO(response.content))
         img_mask.save('mask{}.png'.format(idx))
-    min_mark_x, min_mark_y, max_mark_x, max_mark_y = 1200, 1200, 0, 0
+    min_mark_x, min_mark_y, max_mark_x, max_mark_y = 1000, 1000, 0, 0
     img_mask_o = img_mask
     img_mask = np.array(img_mask)
     for i in range(img_mask.shape[0]):
@@ -132,7 +139,7 @@ def draw_map(idx, points, unchange, heatmap, pred):
     try:
         img_bg = Image.open('bg{}.png'.format(idx))
     except:
-        url = 'https://apis.map.qq.com/ws/staticmap/v2/?key=TORBZ-AGC3R-Y7YWF-WUVMG-CY3D3-BNFSC&size=1200*1200&bounds={}&maptype1=satellite'.format(map_p_str)
+        url = 'https://apis.map.qq.com/ws/staticmap/v2/?key=TORBZ-AGC3R-Y7YWF-WUVMG-CY3D3-BNFSC&size=1000*1000&bounds={}&maptype=satellite'.format(map_p_str)
         print(url)
         response = requests.get(url)
         img_bg = Image .open(BytesIO(response.content))
@@ -159,10 +166,11 @@ def draw_map(idx, points, unchange, heatmap, pred):
         if (heat >= threshold_uncertainly):
             mx, my = mapping_points(this_pt[1], this_pt[0])
             print('over threshold: ', heat)
-            circle_radius = int(40 * (1 + heat))
+            circle_radius = int(10 * (1 + 20*(heat - threshold_uncertainly)))
             draw.ellipse([mx - circle_radius, my - circle_radius, mx + circle_radius, my + circle_radius],
-                         fill=(int(255 * (1 - heat)), int(255 * (1 - heat)), int(255 * (1 - heat)), 128),
-                         outline=None, width=0)
+                         #fill=(int(255 * (1 - heat)), int(255 * (1 - heat)), int(255 * (1 - heat)), 128),
+                         fill = (255, 255, 255, int((heat-threshold_uncertainly)*208+10)),
+                         outline=(255,255,255,200), width=4)
 
     # 画线
     for i in range(len(points)-1):
@@ -180,6 +188,7 @@ def draw_map(idx, points, unchange, heatmap, pred):
 
     # 画方式改变的圆和端点
     upcount = 0
+    upm, dnm = 0,0
     for i in range(len(points)):
         this_pt = points[i]
         if not unchange[i] or i==0 or i==len(points)-1:
@@ -198,17 +207,23 @@ def draw_map(idx, points, unchange, heatmap, pred):
                          outline=darker_color, width=3)
             #### 标出ABCD...
             # 计算斜率
-            another_pt = points[1 if i==0 else i-1]
+            another_pt = points[i+5 if i<5 else i-5]
             x1, y1 = mapping_points(this_pt[1], this_pt[0])
             x2, y2 = mapping_points(another_pt[1], another_pt[0])
             if y1 == y2: k=1
             else: k=(x1-x2)/(y1-y2)
             k = abs(k)
-            if k < 1: xb, yb = 25, -25
-            else: yb, xb = -65, -15
+            if k < 1: ## 显示在下面
+                if dnm % 2 == 0: xb, yb = 25, -25
+                else: xb, yb = 25, -25
+                dnm = dnm+1
+            else:  ## 显示在左右
+                if upm % 2 == 0: yb, xb = -65, -15
+                else: yb, xb = -65, -15
+                upm = upm + 1
             wd = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'[upcount]
             draw.text((x1+xb, y1+yb), wd, fill=(0,0,0), font=ImageFont.truetype('arial', size=40))
-            print('MARK: ', wd, [x1+xb, y1+yb])
+            print('MARK: ', wd, [x1+xb, y1+yb], 'up' if k>1 else 'right')
             upcount = upcount+1
 
     #img.show()
@@ -228,7 +243,7 @@ def draw_map(idx, points, unchange, heatmap, pred):
 
 if __name__ == '__main__':
     x, y, hm, pred = load_data()
-    i = 77
+    i = track_index
     draw_map(i, x[i], [t[0] for t in y[i]], hm[i], pred[i])
     #for track_idx in range(x.shape[0]):
     #    draw_map(track_idx, x[track_idx])
