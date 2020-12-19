@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <style>
+        div.c {
+            margin: 0;
+            display: block;
+            height: 5px;
+            width: 40px;
+        }
+    </style>
+
+    <div id="container"></div>
+
+    <script>
+        (function() {
+            var conrtainer = document.getElementById('container');
+            var R = 255, G = 233, B = 233;
+            for (var i=0; i<=100; i+=1) {
+                var t = (i / 100);
+                conrtainer.innerHTML += `<div class='c' style='background: rgb(${parseInt(255*t)}, 100, ${parseInt(255*(1-t))})'>`
+            } 
+        })();
+    </script>
+</body>
+</html>
