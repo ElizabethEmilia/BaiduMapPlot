@@ -12,6 +12,7 @@ def load_data():
 
 #################
 track_index = [14, 17, 21, 40, 76, 77, 99, 119]
+#track_index = 40
 #################
 def draw_map(idx, points, unchange, heatmap, pred):
     ################
@@ -37,6 +38,7 @@ def draw_map(idx, points, unchange, heatmap, pred):
     no_uncertainly = False
     no_mark = False
     zoom = 4
+    word_color = 'yellow'
     ################
 
     ## load offset parameters
@@ -82,11 +84,7 @@ def draw_map(idx, points, unchange, heatmap, pred):
 
     color_idx = 0
     def get_color():
-        if color_idx == 0: return (255,0,0)
-        elif color_idx == 1: return (0,0,255)
-        elif color_idx == 2: return (0,0,0)
-        elif color_idx == 3: return (255,0,0)
-        else: return [int(x) for x in np.random.rand((3))*255]
+        return [(0,255,0), (255, 0, 0)][color_idx % 2]
 
     def get_color_by_heat(heat):
         return (int(255*(heat)), 100, int(255*(1-heat)))
@@ -215,25 +213,25 @@ def draw_map(idx, points, unchange, heatmap, pred):
                 continue
             #### 标出ABCD...
             # 计算斜率
-            another_pt = points[i+5 if i<5 else i-5]
+            another_pt = points[len(points)-1 if i>len(points)-11 else i+10]
             x1, y1 = mapping_points(this_pt[1], this_pt[0])
             x2, y2 = mapping_points(another_pt[1], another_pt[0])
-            if y1 == y2: k=1
-            else: k=(x1-x2)/(y1-y2)
-            k = abs(k)
-            if k < 1: ## 显示在下面
-                if dnm % 2 == 0: xb, yb = 25, -25
-                else: xb, yb = 25, -25
-                xb, yb = xb*zoom, yb*zoom
-                dnm = dnm+1
-            else:  ## 显示在左右
-                if upm % 2 == 0: yb, xb = -65, -15
-                else: yb, xb = -65, -15
-                xb, yb = xb * zoom, yb * zoom
-                upm = upm + 1
+            if x1 == x2: k=1
+            else: k=(y1-y2)/(x1-x2)
+            if abs(k) < 1: ## |k| < 1  显示在下面
+                if k < 0:  ## 显示在左下角
+                    xb, yb = 10, 10
+                else: ## 右下角
+                    xb, yb = 10, 10
+            else:  ## |k >= 1| 显示在左右
+                if k < 0:
+                    yb, xb = 15, -55
+                else:
+                    yb, xb = 15, -35
+            xb, yb = xb * zoom, yb * zoom
             wd = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'[upcount]
-            draw.text((x1+xb, y1+yb), wd, fill=(0,0,0), font=ImageFont.truetype('arial', size=int(40*zoom)))
-            print('MARK: ', wd, [x1+xb, y1+yb], 'up' if k>1 else 'right')
+            draw.text((x1+xb, y1+yb), wd, fill=word_color, stroke_fill='black', stroke_width=3*zoom, font=ImageFont.truetype('arial', size=int(40*zoom)))
+            print('MARK: ', wd, [x1+xb, y1+yb], k)
             upcount = upcount+1
 
     #img.show()
@@ -256,7 +254,7 @@ def draw(i):
 
 if __name__ == '__main__':
     x, y, hm, pred = load_data()
-    if track_index is int:
+    if isinstance(track_index, int):
         draw(track_index)
     else:
         for i in track_index:
